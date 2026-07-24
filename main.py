@@ -3,13 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-MAX_MONITOR_WORKSPACE_SIZE = 5
-KEY_MAPP = {"6": "1", "7": "2", "8": "3", "9": "4", "0": "5"}
 CONFIG_PATH = Path.home() / ".config" / "hypr" / "monitors.conf"
-
-
-def main():
-    print("stuff")
 
 
 def read_config_file(path: Path):
@@ -17,7 +11,7 @@ def read_config_file(path: Path):
     with open(path, "r") as f:
         for line in f:
             line = line.strip()
-            if "workspace =" in line:
+            if ("workspace =" in line or "workspace=" in line) and "#" not in line:
                 config_lines.append(line)
     return config_lines
 
@@ -53,12 +47,8 @@ def switch_workspace(key: str, current_monitor: str, parsed_config: dict[str, st
     system_workspaces = parsed_config[current_monitor]
     index = int(key)
     index -= 1
-    if key in system_workspaces:
-        subprocess.run(["hyprctl", "dispatch", "workspace", key], check=True)
-        return
-
     workspace_active_number = system_workspaces[index]
-    key = str(workspace_active_number)
+    key = workspace_active_number
     subprocess.run(["hyprctl", "dispatch", "workspace", key], check=True)
 
 
