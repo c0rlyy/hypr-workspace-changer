@@ -2,11 +2,14 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
+# legacy but left
 CONFIG_PATH = Path.home() / ".config" / "hypr" / "monitors.conf"
 
 
 def read_config_file(path: Path):
+    """legacy"""
     config_lines = []
     with open(path, "r") as f:
         for line in f:
@@ -17,6 +20,7 @@ def read_config_file(path: Path):
 
 
 def parse_config_lines(config_lines: list[str]) -> dict[str, str]:
+    """legacy"""
     parsed_lines = {}
     for line in config_lines:
         parts = [p.strip() for p in line.split(",")]
@@ -32,29 +36,42 @@ def parse_config_lines(config_lines: list[str]) -> dict[str, str]:
     return parsed_lines
 
 
-def get_focused_monitor() -> str:
+def get_focused_monitor() -> Any:
     result = subprocess.run(
         ["hyprctl", "monitors", "-j"], capture_output=True, text=True, check=True
     )
-    monitors: list[dict[str, str]] = json.loads(result.stdout)
+    monitors: list[dict[str, Any]] = json.loads(result.stdout)
     for m in monitors:
         if m["focused"]:
             return m["name"]
-    return ""
+    return None
 
 
-def switch_workspace(key: str, current_monitor: str, parsed_config: dict[str, str]):
+def get_config_from_cmd():
+    monitors_workspaces = {}
+    result = subprocess.run(
+        ["hyprctl", "workspacerules", "-j"], capture_output=True, text=True, check=True
+    )
+    monitros_config: list[dict[str, Any]] = json.loads(result.stdout)
+    for config in monitros_config:
+        monitor = config["monitor"]
+        workspace = config["workspaceString"]
+        monitors_workspaces.setdefault(monitor, []).append(workspace)
+    return monitors_workspaces
+
+
+def switch_workspace(
+    key: str, current_monitor: str, parsed_config: dict[str, list[str]]
+):
     system_workspaces = parsed_config[current_monitor]
-    index = int(key)
-    index -= 1
+    index = int(key) - 1
     workspace_active_number = system_workspaces[index]
     key = workspace_active_number
     subprocess.run(["hyprctl", "dispatch", "workspace", key], check=True)
 
 
 if __name__ == "__main__":
-    config = read_config_file(CONFIG_PATH)
-    parsed_config = parse_config_lines(config)
+    parsed_config = get_config_from_cmd()
     key = sys.argv[1]
     current_monitor = get_focused_monitor()
     switch_workspace(key, current_monitor, parsed_config)
